@@ -14,7 +14,9 @@ Add to a video source to generate camera gimbal direction output used to re-cent
 
 Generate and Print markers from here: [ArUco Marker generator](http://chev.me/arucogen/), use the 4x4 dictionary.
 
-Find an example Marker in the `docs/` subdir: ![ArUco 4x4 ID 15](docs/4x4_1000-15.svg)
+Find an example Marker in the `docs/` subdir:
+
+![ArUco 4x4 ID 15](docs/4x4_1000-15.svg)
 
 #### REQUIREMENTS
 
