@@ -49,7 +49,7 @@ Servos. (See the Sketch for more information)
 
 #### "Klein Glotzi" Camera gimbal
 
-![Klein Glotzi](doc/glotzi.png)
+![Klein Glotzi](docs/glotzi.png)
 
 - The plans for the Gimbal can be seen here: [Klein Glotzi on OnShape CAD](https://cad.onshape.com/documents/6b43bf9158c2330bf8f3274f/w/bf932df38055a7275eddfee5/e/89a3396a8a0f5c6514141639)
 - The STL Files for 3D-Printing the gimbal are in the STL Subfolder.
