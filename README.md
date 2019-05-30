@@ -42,7 +42,7 @@ for local installation or `cmake .. -DSYSTEM_INSTALL=1` for system installation
 
 The Arduino sketch is used for controlling a camera gimbal (nicknamed "Klein Glotzi").
 
-You will need the Library `PWMServo` for the sketch to work.
+You will need the Library [PWMServo](https://github.com/PaulStoffregen/PWMServo) for the sketch to work.
 Before flashing the Sketch make sure that the calibration values are good for your
 Servos. (See the Sketch for more information)
 
@@ -54,4 +54,4 @@ Servos. (See the Sketch for more information)
 - The plans for the Gimbal can be seen here: [Klein Glotzi on OnShape CAD](https://cad.onshape.com/documents/6b43bf9158c2330bf8f3274f/w/bf932df38055a7275eddfee5/e/89a3396a8a0f5c6514141639)
 - The STL Files for 3D-Printing the gimbal are in the STL Subfolder.
 - In addition to an Arduino Uno (or Nano) you will need some wires and two Tower SG90 Micro Servos.
-- The Gimbal mount is built for a MS Lifecam.
+- The Gimbal mount is built for a MS Lifecam, so you probably want one of those too.
