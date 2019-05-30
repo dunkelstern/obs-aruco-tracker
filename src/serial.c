@@ -64,14 +64,20 @@ void serial_close(int fd) {
 
 void serial_write(int fd, uint64_t timestamp, uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
     char *buffer;
+    // int len = asprintf(
+    //     &buffer,
+    //     "%d,%d/%d,%d %lld\n",
+    //     (int)(((double)x - ((double)width / 2.0)) / ((double)width / 8.0)),
+    //     (int)(((double)y - ((double)height / 2.0)) / ((double)height / 8.0)),
+    //     x,
+    //     y,
+    //     timestamp
+    // );
     int len = asprintf(
         &buffer,
-        "%d,%d/%d,%d %lld\n",
-        (int)(((double)x - ((double)width / 2.0)) / ((double)width / 8.0)),
-        (int)(((double)y - ((double)height / 2.0)) / ((double)height / 8.0)),
-        x,
-        y,
-        timestamp
+        "%d,%d\n",
+        (int)((((double)width / 2.0) - (double)x) / ((double)width / 8.0)),
+        (int)(((double)y - ((double)height / 2.0)) / ((double)height / 8.0))
     );
 
     int wlen = write(fd, buffer, len);
