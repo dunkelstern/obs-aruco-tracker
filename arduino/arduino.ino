@@ -17,9 +17,13 @@ const int servo_x_angle_max = 180;
 const int servo_y_angle_min = 70;
 const int servo_y_angle_max = 160;
 
-// Initial position (0 left, 199 right, 100 centered)
-int x = 100;
-int y = 100;
+// Initial position (0 left, 399 right, 200 centered)
+const int max_val = 90;
+int x = max_val / 2;
+int y = max_val / 2;
+
+// loop counter for servo deactivation
+int loop_counter = 0;
 
 void setup() {
   // Using Arduino Uno we only have 2 PWM pins (9 and 10)
@@ -47,56 +51,61 @@ void loop() {
         break;
       }
     }
+  }
 
+  // re-position servos
+  if (move_x || move_y) {
 //    Serial.print("Moving ");
 //    Serial.print(move_x);
 //    Serial.print(", ");
 //    Serial.println(move_y);
+
+    // re-attach detached servos
+    if (move_y && (!servo_y.attached())) {
+        servo_y.attach(SERVO_PIN_A, servo_y_pwm_min, servo_y_pwm_max);
+    }
+    if (move_x && (!servo_x.attached())) {
+        servo_x.attach(SERVO_PIN_B, servo_x_pwm_min, servo_x_pwm_max);
+    }
+
+    x += move_x;
+    y += move_y;
+
+    // clamp value range to 0 to 199
+    if (x > max_val) {
+      x = max_val;
+    }
+    if (x < 0) {
+      x = 0;
+    }
+
+    if (y > max_val) {
+      y = max_val;
+    }
+    if (y < 0) {
+      y = 0;
+    }
+
+    // update servo position
+    servo_x.write(map(x, 0, max_val, servo_x_angle_min, servo_x_angle_max));
+    servo_y.write(map(y, 0, max_val, servo_y_angle_min, servo_y_angle_max));
+    loop_counter = 0;
+
   }
 
-  // re-attach detached servos
-  if (move_y && (!servo_y.attached())) {
-      servo_y.attach(SERVO_PIN_A, servo_y_pwm_min, servo_y_pwm_max);
-  }
-  if (move_x && (!servo_x.attached())) {
-      servo_x.attach(SERVO_PIN_B, servo_x_pwm_min, servo_x_pwm_max);
+  // wait 30 ms
+  delay(30);
+
+  // detach servos to avoid jittering and whining after one second
+  loop_counter++;
+  if (loop_counter >= 33) {
+    loop_counter = 0;
+    if (servo_x.attached()) {
+      servo_x.detach();
+    }
+    if (servo_y.attached()) {
+      servo_y.detach();
+    }
   }
 
-  x += move_x;
-  y += move_y;
-
-  // clamp value range to 0 to 199
-  if (x > 199) {
-    x = 199;
-  }
-  if (x < 0) {
-    x = 0;
-  }
-
-  if (y > 199) {
-    y = 199;
-  }
-  if (y < 0) {
-    y = 0;
-  }
-
-//  Serial.print("Position ");
-//  Serial.print(x);
-//  Serial.print(", ");
-//  Serial.println(y);
-  
-  // re-position servos
-  servo_x.write(map(x, 0, 199, servo_x_angle_min, servo_x_angle_max));
-  servo_y.write(map(y, 0, 199, servo_y_angle_min, servo_y_angle_max));
-
-  // wait 100 ms
-  delay(100);
-
-  // detach servos to avoid jittering and whining
-  if (servo_x.attached()) {
-    servo_x.detach();
-  }
-  if (servo_y.attached()) {
-    servo_y.detach();
-  }
 }

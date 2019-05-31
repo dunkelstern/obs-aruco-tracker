@@ -19,6 +19,7 @@ struct aruco_data {
     bool draw_marker;
     uint32_t min_move_distance;
     const char *output_device;
+    uint32_t skip;
     
     // aruco dict
     cv::Ptr<cv::aruco::Dictionary> dictionary;
@@ -30,6 +31,7 @@ struct aruco_data {
 
     // last marker position
     double last_x, last_y;
+    uint32_t frame_counter;
 
     // serial port
     int baudrate;
@@ -81,6 +83,12 @@ static void check_markers(
 static struct obs_source_frame *aruco_filter_video(void *data, struct obs_source_frame *frame) {
 	struct aruco_data *filter = (struct aruco_data *)data;
     obs_source_t *parent = obs_filter_get_parent(filter->context);
+
+    filter->frame_counter++;
+    if (filter->frame_counter < filter->skip) {
+        return frame;
+    }
+    filter->frame_counter = 0;
 
     if (filter->draw_marker) {
 
@@ -226,6 +234,7 @@ static void aruco_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, "id", 15);
 	obs_data_set_default_bool(settings, "draw_marker", true);
 	obs_data_set_default_int(settings, "min_move", 20);
+	obs_data_set_default_int(settings, "skip", 5);
 	obs_data_set_default_string(settings, "output_path", "/dev/null");
     obs_data_set_default_string(settings, "baudrate", "115200");
 }
@@ -247,6 +256,8 @@ static void *aruco_create(obs_data_t *settings, obs_source_t *context)
     filter->last_y = 0;
     filter->serial_fd = -1;
     filter->baudrate = 115200;
+    filter->frame_counter = 0;
+    filter->skip = 5;
 
 	aruco_update(filter, settings);
     obs_source_update(context, settings);
@@ -260,6 +271,7 @@ static obs_properties_t *aruco_properties(void *data)
 
 	obs_properties_add_int(props, "id", "ID", 0, 49, 1);
 	obs_properties_add_bool(props, "draw_marker", "Draw Marker");
+	obs_properties_add_int(props, "skip", "Only run marker detection every n frames", 1, 60, 1);
 	obs_properties_add_int(props, "min_move", "Minimal trigger distance", 0, 2000, 10);
     obs_properties_add_path(props, "output_device", "Serial output device", OBS_PATH_FILE, NULL, "/dev/null");
     obs_property_t *baudrates = obs_properties_add_list(props, "baudrate", "Serial Baudrate", OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
@@ -282,6 +294,7 @@ static void aruco_update(void *data, obs_data_t *settings)
 	int id = obs_data_get_int(settings, "id");
     bool draw_marker = obs_data_get_bool(settings, "draw_marker");
     int min_move = obs_data_get_int(settings, "min_move");
+    int skip = obs_data_get_int(settings, "skip");
     const char *device = obs_data_get_string(settings, "output_device");
     int baudrate = atoi(obs_data_get_string(settings, "baudrate"));
 
@@ -290,6 +303,7 @@ static void aruco_update(void *data, obs_data_t *settings)
 	filter->aruco_id = id;
     filter->draw_marker = draw_marker;
     filter->min_move_distance = min_move;
+    filter->skip = skip;
 
     int len = strlen(device) > strlen(filter->output_device) ? strlen(filter->output_device) : strlen(device);
     
