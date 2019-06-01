@@ -1,19 +1,19 @@
 cmake_minimum_required(VERSION 2.8)
 project(obs-aruco-tracker)
 set(obs-aruco-tracker_DESCRIPTION "Track ArUco markers and output movement commands to re-center the marker.")
-set(obs-aruco-tracker_VERSION_MAJOR 0)
-set(obs-aruco-tracker_VERSION_MINOR 1)
+set(obs-aruco-tracker_VERSION_MAJOR 1)
+set(obs-aruco-tracker_VERSION_MINOR 0)
 set(obs-aruco-tracker_VERSION_PATCH 0)
 set(CMAKE_BUILD_TYPE Release)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
-find_package(LibObs)
-if(${LibObs_FOUND})
-    message(STATUS "LibObs FOUND")
-else()
-    message(FATAL_ERROR "LibObs NOT FOUND")
-endif()
+find_package(LibObs REQUIRED)
+# if(${LibObs_FOUND})
+#     message(STATUS "LibObs FOUND")
+# else()
+#     message(FATAL_ERROR "LibObs NOT FOUND")
+# endif()
 
 if(COMMAND cmake_policy)
 	cmake_policy(SET CMP0003 OLD)
@@ -32,7 +32,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PLUGIN_BIN_DIRECTORY})
 
 include_directories(src ${LIBOBS_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIRS})
 
-set(SOURCE_FILES src/obs-tracker.c src/serial.c src/tracker-filter.cpp)
+if(WIN32) 
+    set(SOURCE_FILES src/obs-tracker.c src/serial-windows.cpp src/tracker-filter.cpp)
+    add_compile_options("/std:c++latest")
+elseif(APPLE)
+    set(SOURCE_FILES src/obs-tracker.c src/serial-osx.c src/tracker-filter.cpp)
+else()
+    set(SOURCE_FILES src/obs-tracker.c src/serial-linux.c src/tracker-filter.cpp)
+endif()
 
 add_library(obs-aruco-tracker MODULE ${SOURCE_FILES})
 

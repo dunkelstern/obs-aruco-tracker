@@ -8,7 +8,13 @@
 #include <opencv2/aruco.hpp>
 #include <opencv2/imgcodecs.hpp>
 
-#include "serial.h"
+#ifdef _WIN32
+#include "serial-windows.h"
+#elif __linux__
+#include "serial-linux.h"
+#else
+#include "serial-osx.h"
+#endif
 
 struct aruco_data {
     // self reference
@@ -35,8 +41,10 @@ struct aruco_data {
 
     // serial port
     int baudrate;
-    int serial_fd;
-
+    serial_handle_t serial_fd;
+    #if _WIN32
+    obs_property_t *serial_ports;
+    #endif
 };
 
 static void aruco_update(void *data, obs_data_t *settings);
@@ -53,7 +61,8 @@ static void check_markers(
                 continue;
             }
 
-            double x,y;
+            double x = 0;
+            double y = 0;
             for(std::size_t j = 0; j < 4; j++) {
                 x += corners[i][j].x;
                 y += corners[i][j].y;
@@ -93,40 +102,38 @@ static struct obs_source_frame *aruco_filter_video(void *data, struct obs_source
     if (filter->draw_marker) {
 
         if (filter->scaler_in == NULL) {
-            struct video_scale_info src = {
-                .format = frame->format,
-                .width = frame->width,
-                .height = frame->height,
-                .range = (frame->full_range ? VIDEO_RANGE_FULL: VIDEO_RANGE_PARTIAL),
-                .colorspace = VIDEO_CS_DEFAULT
-            };
-            struct video_scale_info dst = {
-                .format = VIDEO_FORMAT_BGRX,
-                .width = frame->width,
-                .height = frame->height,
-                .range = VIDEO_RANGE_FULL,
-                .colorspace = VIDEO_CS_DEFAULT
-            };
+			struct video_scale_info src;
+			src.format = frame->format;
+			src.width = frame->width;
+			src.height = frame->height;
+			src.range = (frame->full_range ? VIDEO_RANGE_FULL : VIDEO_RANGE_PARTIAL);
+			src.colorspace = VIDEO_CS_DEFAULT;
+
+			struct video_scale_info dst;
+			dst.format = VIDEO_FORMAT_BGRX;
+			dst.width = frame->width;
+			dst.height = frame->height;
+			dst.range = VIDEO_RANGE_FULL;
+			dst.colorspace = VIDEO_CS_DEFAULT;
 
             int ret = video_scaler_create(&filter->scaler_in, &dst, &src, VIDEO_SCALE_DEFAULT);
             blog(LOG_INFO, "ArUco: Video scaler_in init returned %d", ret);
         }
 
         if (filter->scaler_out == NULL) {
-            struct video_scale_info src = {
-                .format = VIDEO_FORMAT_BGRX,
-                .width = frame->width,
-                .height = frame->height,
-                .range = VIDEO_RANGE_FULL,
-                .colorspace = VIDEO_CS_DEFAULT
-            };
-            struct video_scale_info dst = {
-                .format = frame->format,
-                .width = frame->width,
-                .height = frame->height,
-                .range = (frame->full_range ? VIDEO_RANGE_FULL: VIDEO_RANGE_PARTIAL),
-                .colorspace = VIDEO_CS_DEFAULT
-            };
+			struct video_scale_info src;
+			src.format = VIDEO_FORMAT_BGRX;
+			src.width = frame->width;
+			src.height = frame->height;
+			src.range = VIDEO_RANGE_FULL;
+			src.colorspace = VIDEO_CS_DEFAULT;
+
+			struct video_scale_info dst;
+			dst.format = frame->format;
+			dst.width = frame->width;
+			dst.height = frame->height;
+			dst.range = (frame->full_range ? VIDEO_RANGE_FULL : VIDEO_RANGE_PARTIAL);
+			dst.colorspace = VIDEO_CS_DEFAULT;
 
             int ret = video_scaler_create(&filter->scaler_out, &dst, &src, VIDEO_SCALE_DEFAULT);
             blog(LOG_INFO, "ArUco: Video scaler_out init returned %d", ret);
@@ -176,20 +183,19 @@ static struct obs_source_frame *aruco_filter_video(void *data, struct obs_source
         return frame;
     } else {
         if (filter->scaler_simple == NULL) {
-            struct video_scale_info src = {
-                .format = frame->format,
-                .width = frame->width,
-                .height = frame->height,
-                .range = (frame->full_range ? VIDEO_RANGE_FULL: VIDEO_RANGE_PARTIAL),
-                .colorspace = VIDEO_CS_DEFAULT
-            };
-            struct video_scale_info dst = {
-                .format = VIDEO_FORMAT_Y800,
-                .width = frame->width,
-                .height = frame->height,
-                .range = VIDEO_RANGE_FULL,
-                .colorspace = VIDEO_CS_DEFAULT
-            };
+			struct video_scale_info src;
+			src.format = frame->format;
+			src.width = frame->width;
+			src.height = frame->height;
+			src.range = (frame->full_range ? VIDEO_RANGE_FULL : VIDEO_RANGE_PARTIAL);
+			src.colorspace = VIDEO_CS_DEFAULT;
+
+			struct video_scale_info dst;
+			dst.format = VIDEO_FORMAT_Y800;
+			dst.width = frame->width;
+			dst.height = frame->height;
+			dst.range = VIDEO_RANGE_FULL;
+			dst.colorspace = VIDEO_CS_DEFAULT;
 
             int ret = video_scaler_create(&filter->scaler_simple, &dst, &src, VIDEO_SCALE_DEFAULT);
             blog(LOG_INFO, "ArUco: Video scaler_simple init returned %d", ret);
@@ -254,7 +260,6 @@ static void *aruco_create(obs_data_t *settings, obs_source_t *context)
     filter->output_device = "/dev/null";
     filter->last_x = 0;
     filter->last_y = 0;
-    filter->serial_fd = -1;
     filter->baudrate = 115200;
     filter->frame_counter = 0;
     filter->skip = 5;
@@ -265,15 +270,35 @@ static void *aruco_create(obs_data_t *settings, obs_source_t *context)
 	return filter;
 }
 
-static obs_properties_t *aruco_properties(void *data)
-{
+#if _WIN32
+bool refresh_serialports(obs_properties_t *props, obs_property_t *property, void *data) {
+    struct aruco_data *filter = (struct aruco_data *)data;
+
+    for(int i = (int)obs_property_list_item_count(filter->serial_ports) - 1; i >= 0; i--) {
+        obs_property_list_item_remove(filter->serial_ports, i);
+    }
+
+    serial_enumerate(filter->serial_ports);
+	return true;
+}
+#endif
+
+static obs_properties_t *aruco_properties(void *data) {
+    struct aruco_data *filter = (struct aruco_data *)data;
 	obs_properties_t *props = obs_properties_create();
 
 	obs_properties_add_int(props, "id", "ID", 0, 49, 1);
 	obs_properties_add_bool(props, "draw_marker", "Draw Marker");
 	obs_properties_add_int(props, "skip", "Only run marker detection every n frames", 1, 60, 1);
 	obs_properties_add_int(props, "min_move", "Minimal trigger distance", 0, 2000, 10);
+    #if _WIN32
+    obs_property_t *serial_ports = obs_properties_add_list(props, "output_device", "Serial Port", OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
+    filter->serial_ports = serial_ports;
+    obs_property_t *button = obs_properties_add_button(props, "refresh_serialports", "Refresh Serial port List", refresh_serialports);
+    refresh_serialports(props, button, data);
+    #else
     obs_properties_add_path(props, "output_device", "Serial output device", OBS_PATH_FILE, NULL, "/dev/null");
+    #endif
     obs_property_t *baudrates = obs_properties_add_list(props, "baudrate", "Serial Baudrate", OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
     obs_property_list_add_string(baudrates, "9600", "9600");
     obs_property_list_add_string(baudrates, "19200", "19200");
@@ -291,25 +316,25 @@ static obs_properties_t *aruco_properties(void *data)
 static void aruco_update(void *data, obs_data_t *settings)
 {
 	struct aruco_data *filter = (struct aruco_data *)data;
-	int id = obs_data_get_int(settings, "id");
+	int64_t id = obs_data_get_int(settings, "id");
     bool draw_marker = obs_data_get_bool(settings, "draw_marker");
-    int min_move = obs_data_get_int(settings, "min_move");
-    int skip = obs_data_get_int(settings, "skip");
+    int64_t min_move = obs_data_get_int(settings, "min_move");
+    int64_t skip = obs_data_get_int(settings, "skip");
     const char *device = obs_data_get_string(settings, "output_device");
-    int baudrate = atoi(obs_data_get_string(settings, "baudrate"));
+    int64_t baudrate = atoi(obs_data_get_string(settings, "baudrate"));
 
     blog(LOG_INFO, "ArUco: update tracked id to %d", id);
 
-	filter->aruco_id = id;
+	filter->aruco_id = (int)id;
     filter->draw_marker = draw_marker;
-    filter->min_move_distance = min_move;
-    filter->skip = skip;
+    filter->min_move_distance = (uint32_t)min_move;
+    filter->skip = (uint32_t)skip;
 
-    int len = strlen(device) > strlen(filter->output_device) ? strlen(filter->output_device) : strlen(device);
+    size_t len = strlen(device) > strlen(filter->output_device) ? strlen(filter->output_device) : strlen(device);
     
     if ((strncmp(device, filter->output_device, len) != 0) || (filter->baudrate != baudrate)) {
         filter->output_device = device;
-        filter->baudrate = baudrate;
+        filter->baudrate = (int)baudrate;
 
         if (filter->serial_fd >= 0) {
             serial_close(filter->serial_fd);
@@ -337,7 +362,7 @@ static void aruco_destroy(void *data)
 	bfree(data);
 }
 
-struct obs_source_info aruco_tracker_filter = {
+extern "C" struct obs_source_info aruco_tracker_filter = {
 	.id = "aruco_tracker_filter",
 	.type = OBS_SOURCE_TYPE_FILTER,
 	.output_flags = OBS_SOURCE_ASYNC_VIDEO,

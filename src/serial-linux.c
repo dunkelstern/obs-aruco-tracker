@@ -1,4 +1,6 @@
 #define _GNU_SOURCE
+#include "serial-linux.h"
+
 #include <errno.h>
 #include <fcntl.h> 
 #include <stdio.h>
@@ -11,7 +13,7 @@
 #include <obs.h>
 #include <obs-module.h>
 
-static int set_interface_attribs(int fd, int speed) {
+static int set_interface_attribs(serial_handle_t fd, int speed) {
     struct termios tty;
 
     if (tcgetattr(fd, &tty) < 0) {
@@ -58,11 +60,11 @@ int serial_open(const char *file, int baudrate) {
     return fd;
 }
 
-void serial_close(int fd) {
+void serial_close(serial_handle_t fd) {
     close(fd);
 }
 
-void serial_write(int fd, uint64_t timestamp, uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
+void serial_write(serial_handle_t fd, uint64_t timestamp, uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
     char *buffer;
     // int len = asprintf(
     //     &buffer,

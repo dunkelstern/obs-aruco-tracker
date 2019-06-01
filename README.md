@@ -30,7 +30,9 @@ Find an example Marker in the `docs/` subdir:
 Use the included PKGBUILD
 
 
-##### For installation from source:
+##### For installation from source (Linux):
+
+Required: OpenCV and OBS-Studio + dev packages
 
 ```bash
 git clone https://github.com/dunkelstern/obs-aruco-tracker
@@ -43,6 +45,54 @@ make install
 ```
 
 for local installation or `cmake .. -DSYSTEM_INSTALL=1` for system installation
+
+##### Installation from Source (OSX):
+
+Plugin has not been portet to OSX yet, if you want to try, start with the Linux version.
+
+##### Installation from Source (Windows):
+
+You will need a working build of obs:
+
+Required: Visual Studio 2017, CMake
+
+1. Checkout the source from https://github.com/obsproject/obs-studio
+2. Create build directory
+3. Download dependencies from https://obsproject.com/downloads/dependencies2017.zip
+4. Create Visual Studio solution with CMake:
+    ```powershell
+    cd build
+    cmake .. -DDepsPath=/path/to/deps -DDISABLE_UI=1 -G "VisualStudio 15 2017 64bit"
+    ```
+5. Build OBS
+
+You will need a working build of openCV:
+
+Required: Visual Studio 2017 or 2019, CMake
+
+1. Get VcPkg https://github.com/microsoft/vcpkg (follow the quick start guide)
+2. Compile openCV: `vcpkg install opencv[contrib]`
+3. Export openCV `vcpkg export opencv --zip`
+4. Unpack the zip somewhere where you can find it
+
+Now we can build the plugin:
+
+Required: Visual Studio 2019, CMake
+
+```powershell
+cd obs-aruco-tracker
+mkdir build
+cd build
+cmake .. \
+    -DSYSTEM_INSTALL=0 \
+    -DCMAKE_TOOLCHAIN_FILE="$HOME\Code\obs-aruco-tracker\build\opencv\scripts\buildsystems\vcpkg.cmake" \
+    -DLIBOBS_LIB="$HOME\Code\obs-studio\build\libobs\Debug\obs.lib" \
+    -DLIBOBS_INCLUDE_DIR="$HOME\Code\obs-studio\libobs"
+    -DW32_PTHREADS_LIB="$HOME\Code\obs-studio\build\deps\w32-pthreads\Debug\w32-pthreads.lib"
+    -G "Visual Studio 16" -A x64
+```
+
+As you can see I build my stuff in `$HOME\Code\*`, I unpacked the `VcPkg` zip directly into the build dir and renamed it to `opencv`.
 
 #### Arduino sketch
 
