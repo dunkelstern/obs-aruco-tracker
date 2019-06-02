@@ -2,9 +2,11 @@
 
 Track ArUco markers and output movement commands to re-center the marker.
 
-### v0.1.0
+### v1.0.0
 
 ![Screenshot](docs/obs.png)
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/Wq0YTLhK8NY" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ### MODULES
 
