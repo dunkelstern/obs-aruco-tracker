@@ -6,7 +6,7 @@ Track ArUco markers and output movement commands to re-center the marker.
 
 ![Screenshot](docs/obs.png)
 
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/Wq0YTLhK8NY" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+![Youtube video with explanation](http://img.youtube.com/vi/Wq0YTLhK8NY/0.jpg)](http://www.youtube.com/watch?v=Wq0YTLhK8NY "Camera Gimbal")
 
 ### MODULES
 
